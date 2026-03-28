@@ -17,9 +17,11 @@ public:
     bool init();
     void clear(uint8_t r, uint8_t g, uint8_t b);
     void setPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b);
+    void drawDot(int x, int y, int radius, uint8_t r, uint8_t g, uint8_t b);
     void present();
     void pollEvents();
     bool running() const;
+    bool seedRequested();  // returns true once when space is pressed, then resets [maybe think some better way to do this?]
 
     int width()  const { return width_; }
     int height() const { return height_; }
@@ -28,6 +30,7 @@ private:
     int  width_;
     int  height_;
     bool running_;
+    bool seed_requested_;
 
     // unique_ptr (smart) calls the deleter automatically [sUpEr CoOl]
     std::unique_ptr<SDL_Window,   SDLWindowDeleter>   window_;

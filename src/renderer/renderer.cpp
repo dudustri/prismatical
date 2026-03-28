@@ -5,6 +5,7 @@ Renderer::Renderer(int width, int height)
     : width_(width)
     , height_(height)
     , running_(false)
+    , seed_requested_(false)
     , window_(nullptr)
     , sdl_renderer_(nullptr)
     , texture_(nullptr)
@@ -72,6 +73,13 @@ void Renderer::setPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b) {
     pixels_[index + 3] = 255;
 }
 
+void Renderer::drawDot(int x, int y, int radius, uint8_t r, uint8_t g, uint8_t b) {
+    for (int dy = -radius; dy <= radius; dy++)
+        for (int dx = -radius; dx <= radius; dx++)
+            if (dx*dx + dy*dy <= radius*radius)  // inside circle — pythagoras
+                setPixel(x + dx, y + dy, r, g, b);
+}
+
 void Renderer::present() {
     SDL_UpdateTexture(texture_.get(), nullptr, pixels_.data(), width_ * 4);
     SDL_RenderCopy(sdl_renderer_.get(), texture_.get(), nullptr, nullptr);
@@ -79,11 +87,19 @@ void Renderer::present() {
 }
 
 void Renderer::pollEvents() {
+    seed_requested_ = false;  // reset each frame before checking events
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) running_ = false;
-        if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE) running_ = false;
+        if (event.type == SDL_KEYDOWN) {
+            if (event.key.keysym.sym == SDLK_ESCAPE) running_ = false;
+            if (event.key.keysym.sym == SDLK_SPACE)  seed_requested_ = true;
+        }
     }
+}
+
+bool Renderer::seedRequested() {
+    return seed_requested_;
 }
 
 bool Renderer::running() const {
