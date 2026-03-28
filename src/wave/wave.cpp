@@ -1,5 +1,7 @@
 #include "wave.h"
-#include <cmath>    // sin, cos, M_PI
+#include "../config.h"
+#include <algorithm> // std::min, std::max
+#include <cmath>     // sin, cos, M_PI
 #include <cstdlib>  // srand, rand
 
 Wave::Wave(unsigned int seed)
@@ -18,21 +20,21 @@ void Wave::setSeed(unsigned int seed) {
 
 void Wave::deriveparamsFromSeed() {
     srand(seed_);
-    freqA_ = static_cast<float>((rand() % 423) + 1);
-    freqB_ = static_cast<float>((rand() % 333) + 1);
+    freqA_ = static_cast<float>((rand() % config::FREQ_RANGE_A) + 1);
+    freqB_ = static_cast<float>((rand() % config::FREQ_RANGE_B) + 1);
     delta_ = (static_cast<float>(rand()) / RAND_MAX) * 2.0f * M_PI;
 }
 
 void Wave::generate(int width, int height) {
     points_.clear();
 
-    const int steps = 100000;
+    const int steps = config::CURVE_STEPS;
 
-    float cx = width  / 2.0f;
-    float cy = height / 2.0f;
+    float cx = width  / 2.0f;  // screen center x — sine oscillates around 0, so we shift to the middle
+    float cy = height / 2.0f;  // screen center y — same reason
 
-    float ax = cx * 0.9f;
-    float ay = cy * 0.9f;
+    float ax = cx * config::AMPLITUDE_MARGIN;
+    float ay = cy * config::AMPLITUDE_MARGIN;
 
     for (int i = 0; i <= steps; i++) {
         // t goes from 0 to 2pi — one full traversal of the curve
@@ -50,28 +52,27 @@ void Wave::generate(int width, int height) {
     }
 }
 
-// HSV to RGB conversion — gives us the rainbow color cycle
-// h = hue 0.0 to 1.0 (red → green → blue → red)
 Color Wave::colorAt(float t) {
-    float h = t * 360.0f;  // hue in degrees
-    float s = 0.8f;        // full saturation
-    float v = 1.0f;        // full brightness
+    float h = t * 360.0f;  // hue: position on the color wheel (0=red, 120=green, 240=blue, 360=red again)
+    float s = config::COLOR_SATURATION;
+    float v = config::COLOR_BRIGHTNESS;
 
-    float c  = v * s;
-    float x  = c * (1.0f - std::fabs(std::fmod(h / 60.0f, 2.0f) - 1.0f));
-    float m  = v - c;
+    // each color component is offset 120° apart on the wheel
+    // [&] captures h, s, v from the enclosing scope — lambda can read them without passing as args
+    auto hsvComponent = [&](float offset) {
+        // k = hue position relative to this component's starting sector, wrapped to [0, 6)
+        float k = std::fmod(offset + h / config::HUE_SECTOR_SIZE, config::HUE_SECTOR_COUNT);
 
-    float r, g, b;
-    if      (h < 60)  { r = c; g = x; b = 0; }
-    else if (h < 120) { r = x; g = c; b = 0; }
-    else if (h < 180) { r = 0; g = c; b = x; }
-    else if (h < 240) { r = 0; g = x; b = c; }
-    else if (h < 300) { r = x; g = 0; b = c; }
-    else              { r = c; g = 0; b = x; }
+        // trapezoid shape: k ramps up, (peak_width - k) ramps down, 1 clamps the top
+        // min picks the lowest — together they form a rise, hold, fall curve per component
+        float shape = std::max(0.0f, std::min({k, config::HUE_PEAK_WIDTH - k, 1.0f}));
+
+        return v - v * s * shape;  // apply brightness and saturation
+    };
 
     return {
-        static_cast<uint8_t>((r + m) * 255),
-        static_cast<uint8_t>((g + m) * 255),
-        static_cast<uint8_t>((b + m) * 255)
+        static_cast<uint8_t>(hsvComponent(config::HUE_OFFSET_RED)   * 255),
+        static_cast<uint8_t>(hsvComponent(config::HUE_OFFSET_GREEN)  * 255),
+        static_cast<uint8_t>(hsvComponent(config::HUE_OFFSET_BLUE)   * 255),
     };
 }
