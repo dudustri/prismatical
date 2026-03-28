@@ -1,0 +1,7 @@
+build/
+.cache/
+*.o
+*.js
+*.wasm
+*.map
+.DS_Store
