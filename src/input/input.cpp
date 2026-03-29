@@ -7,44 +7,54 @@ Input::Input()
     : quit_(false)
     , seed_(false)
     , pending_seed_("")
+    , togglePhase_(false)
+    , toggleColor_(false)
+    , toggleFreq_(false)
     , running_(true)
     , seed_ready_(false)
 {
     // create a pipe — two connected file descriptors
-    // writing to pipe_fds_[1] makes pipe_fds_[0] readable — used to wake up select()
-    pipe(pipe_fds_);
+    // writing to the write end makes the read end readable — used to wake up select()
+    int pipe_ends[2];
+    if (pipe(pipe_ends) != 0) {
+        std::cerr << "failed to create shutdown pipe\n";
+        return;
+    }
+    shutdown_pipe_read_end_  = pipe_ends[0];
+    shutdown_pipe_write_end_ = pipe_ends[1];
 
     stdin_thread_ = std::thread([this]() { stdinLoop(); });
 }
 
 Input::~Input() {
     running_ = false;
-    // write one byte to the pipe's write end — this wakes up select() in stdinLoop
-    // select() will see pipe_fds_[0] is readable and the loop will exit cleanly
-    write(pipe_fds_[1], "x", 1);
+    // write one byte to the write end — this wakes up select() in stdinLoop
+    // select() will see shutdown_pipe_read_end_ is readable and the loop will exit cleanly
+    if (write(shutdown_pipe_write_end_, "x", 1) < 0)
+        std::cerr << "failed to signal shutdown pipe\n";
     if (stdin_thread_.joinable())
         stdin_thread_.join();
-    close(pipe_fds_[0]);
-    close(pipe_fds_[1]);
+    close(shutdown_pipe_read_end_);
+    close(shutdown_pipe_write_end_);
 }
 
 void Input::stdinLoop() {
     while (running_) {
         // select() watches multiple file descriptors at once — blocks until one is ready
-        fd_set fds;
-        FD_ZERO(&fds);                    // clear the set
-        FD_SET(STDIN_FILENO, &fds);       // watch stdin
-        FD_SET(pipe_fds_[0], &fds);       // watch pipe read end — signals shutdown
+        fd_set watched_file_descriptors;
+        FD_ZERO(&watched_file_descriptors);
+        FD_SET(STDIN_FILENO, &watched_file_descriptors);
+        FD_SET(shutdown_pipe_read_end_, &watched_file_descriptors);
 
-        // block until stdin has input OR the pipe is written to (shutdown signal)
-        int ready = select(pipe_fds_[0] + 1, &fds, nullptr, nullptr, nullptr);
-        if (ready <= 0 || !running_) break;
+        // block until stdin has input OR the shutdown pipe is written to
+        int ready_count = select(shutdown_pipe_read_end_ + 1, &watched_file_descriptors, nullptr, nullptr, nullptr);
+        if (ready_count <= 0 || !running_) break;
 
-        // if the pipe fired, it's a shutdown signal — exit the loop
-        if (FD_ISSET(pipe_fds_[0], &fds)) break;
+        // if the shutdown pipe fired, the destructor signaled us to exit
+        if (FD_ISSET(shutdown_pipe_read_end_, &watched_file_descriptors)) break;
 
         // stdin is ready — read the line
-        if (FD_ISSET(STDIN_FILENO, &fds)) {
+        if (FD_ISSET(STDIN_FILENO, &watched_file_descriptors)) {
             std::string line;
             if (!std::getline(std::cin, line)) break;
 
@@ -66,8 +76,11 @@ void Input::pollSDL() {
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) quit_ = true;
         if (event.type == SDL_KEYDOWN) {
-            if (event.key.keysym.sym == SDLK_ESCAPE) quit_ = true;
-            if (event.key.keysym.sym == SDLK_SPACE)  seed_ = true;
+            if (event.key.keysym.sym == SDLK_ESCAPE) quit_         = true;
+            if (event.key.keysym.sym == SDLK_SPACE)  seed_         = true;
+            if (event.key.keysym.sym == SDLK_1)      togglePhase_  = true;  // phase drift
+            if (event.key.keysym.sym == SDLK_2)      toggleColor_  = true;  // color flow
+            if (event.key.keysym.sym == SDLK_3)      toggleFreq_   = true;  // freq morph
         }
     }
 }
@@ -76,6 +89,9 @@ void Input::poll() {
     quit_         = false;
     seed_         = false;
     pending_seed_ = "";
+    togglePhase_  = false;
+    toggleColor_  = false;
+    toggleFreq_   = false;
 
     pollSDL();
 

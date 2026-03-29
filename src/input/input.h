@@ -13,14 +13,20 @@ public:
 
     void poll();
 
-    bool        quitRequested() const { return quit_; }
-    bool        seedRequested() const { return seed_; }
-    std::string pendingSeed()   const { return pending_seed_; }
+    bool        quitRequested()         const { return quit_; }
+    bool        seedRequested()         const { return seed_; }
+    std::string pendingSeed()           const { return pending_seed_; }
+    bool        togglePhaseRequested()  const { return togglePhase_; }
+    bool        toggleColorRequested()  const { return toggleColor_; }
+    bool        toggleFreqRequested()   const { return toggleFreq_;  }
 
 private:
     bool        quit_;
     bool        seed_;
     std::string pending_seed_;
+    bool        togglePhase_;
+    bool        toggleColor_;
+    bool        toggleFreq_;
 
     std::thread       stdin_thread_;
     std::mutex        mutex_;
@@ -29,9 +35,8 @@ private:
     std::atomic<bool> seed_ready_;
 
     // pipe used to unblock the stdin thread on shutdown
-    // pipe_fds_[0] = read end, pipe_fds_[1] = write end
-    // writing one byte to [1] wakes up select() in stdinLoop
-    int pipe_fds_[2];
+    int shutdown_pipe_read_end_; // select() watches this; becomes readable when shutdown is signaled
+    int shutdown_pipe_write_end_; //destructor writes one byte here to wake up select()
 
     void stdinLoop();
     void pollSDL();
