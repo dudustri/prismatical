@@ -2,7 +2,9 @@
 
 A psychedelic[ish] seed based (for now) visual synthesizer with aNiMaTioOOn.
 
-![demo placeholder](assets/demo.gif)
+<div align="center">
+  <img src="assets/demo.gif" alt="prismatical demo" />
+</div>
 
 ## What it does
 
