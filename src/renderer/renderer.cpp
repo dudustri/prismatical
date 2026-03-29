@@ -1,11 +1,10 @@
 #include "renderer.h"
 #include <iostream>
+#include <cmath>
 
 Renderer::Renderer(int width, int height)
     : width_(width)
     , height_(height)
-    , running_(false)
-    , seed_requested_(false)
     , window_(nullptr)
     , sdl_renderer_(nullptr)
     , texture_(nullptr)
@@ -50,7 +49,6 @@ bool Renderer::init() {
         return false;
     }
 
-    running_ = true;
     return true;
 }
 
@@ -80,28 +78,18 @@ void Renderer::drawDot(int x, int y, int radius, uint8_t r, uint8_t g, uint8_t b
                 setPixel(x + dx, y + dy, r, g, b);
 }
 
+void Renderer::drawLine(int x0, int y0, int x1, int y1, int width, uint8_t r, uint8_t g, uint8_t b) {
+    int steps = std::abs(x1 - x0) + std::abs(y1 - y0);
+    for (int i = 0; i <= steps; i++) {
+        float t  = (steps == 0) ? 0.0f : static_cast<float>(i) / steps;
+        int   px = static_cast<int>(x0 + t * (x1 - x0));
+        int   py = static_cast<int>(y0 + t * (y1 - y0));
+        drawDot(px, py, width, r, g, b);
+    }
+}
+
 void Renderer::present() {
     SDL_UpdateTexture(texture_.get(), nullptr, pixels_.data(), width_ * 4);
     SDL_RenderCopy(sdl_renderer_.get(), texture_.get(), nullptr, nullptr);
     SDL_RenderPresent(sdl_renderer_.get());
-}
-
-void Renderer::pollEvents() {
-    seed_requested_ = false;  // reset each frame before checking events
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_QUIT) running_ = false;
-        if (event.type == SDL_KEYDOWN) {
-            if (event.key.keysym.sym == SDLK_ESCAPE) running_ = false;
-            if (event.key.keysym.sym == SDLK_SPACE)  seed_requested_ = true;
-        }
-    }
-}
-
-bool Renderer::seedRequested() {
-    return seed_requested_;
-}
-
-bool Renderer::running() const {
-    return running_;
 }

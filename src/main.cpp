@@ -1,42 +1,45 @@
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
+#include <string>
+#include <functional>  // std::hash
 #include "config.h"
 #include "renderer/renderer.h"
-#include "wave/wave.h"
+#include "input/input.h"
+#include "scene/scene.h"
 
 int main(int argc, char* argv[]) {
     srand(static_cast<unsigned int>(time(nullptr)));
 
-    unsigned int seed = (argc > 1) ? std::stoul(argv[1]) : 1234;
-    std::cout << "prismatical — seed: " << seed << "\n";
+    auto hashSeed = [](const std::string& s) {
+        return static_cast<unsigned int>(std::hash<std::string>{}(s));
+    };
+
+    unsigned int seed = (argc > 1) ? hashSeed(argv[1]) : hashSeed("prismatical");
+    std::string seedStr = (argc > 1) ? argv[1] : "prismatical";
+    std::cout << "prismatical — seed: " << seedStr << " (" << seed << ")\n";
 
     Renderer renderer(config::WINDOW_WIDTH, config::WINDOW_HEIGHT);
     if (!renderer.init()) return 1;
 
-    Wave wave(seed);
-    wave.generate(renderer.width(), renderer.height());
+    Input input;
+    Scene scene(renderer, seed);
 
-    while (renderer.running()) {
-        renderer.pollEvents();
+    while (!input.quitRequested()) {
+        input.poll();
 
-        if (renderer.seedRequested()) {
-            seed = static_cast<unsigned int>(rand());
-            std::cout << "new seed: " << seed << "\n";
-            wave.setSeed(seed);
-            wave.generate(renderer.width(), renderer.height());
+        if (input.seedRequested()) {
+            // terminal input takes priority over space — use typed string if available
+            std::string seedStr = input.pendingSeed().empty()
+                ? std::to_string(rand())
+                : input.pendingSeed();
+
+            seed = hashSeed(seedStr);
+            std::cout << "new seed: " << seedStr << " (" << seed << ")\n";
+            scene.setSeed(seed);
         }
 
-        renderer.clear(config::BG_R, config::BG_G, config::BG_B);
-
-        const auto& points = wave.points();
-        for (int i = 0; i < static_cast<int>(points.size()); i++) {
-            float t = static_cast<float>(i) / static_cast<float>(points.size());
-            Color c = Wave::colorAt(t);
-            renderer.drawDot(points[i].x, points[i].y, config::DOT_RADIUS, c.r, c.g, c.b);
-        }
-
-        renderer.present();
+        scene.draw();
     }
 
     return 0;
