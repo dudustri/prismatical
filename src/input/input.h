@@ -5,15 +5,18 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
+#include <csignal>
 
 class Input {
 public:
     Input();
     ~Input();
 
+    static std::atomic<bool> interrupted;
+
     void poll();
 
-    bool        quitRequested()         const { return quit_; }
+    bool        quitRequested()         const { return quit_ || interrupted; }
     bool        seedRequested()         const { return seed_; }
     std::string pendingSeed()           const { return pending_seed_; }
     bool        togglePhaseRequested()  const { return togglePhase_; }
@@ -40,4 +43,5 @@ private:
 
     void stdinLoop();
     void pollSDL();
+    static void onInterrupt(int);
 };

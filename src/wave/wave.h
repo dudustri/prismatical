@@ -15,13 +15,10 @@ struct Color {
 class Wave {
 public:
     Wave(unsigned int seed);
-
     void generate(int width, int height);
-
+    void generateAnimated(int width, int height, float animDelta, float freqShift);
     const std::vector<Point>& points() const { return points_; }
-
-    static Color colorAt(float t);
-
+    static Color colorAt(float t, float colorOffset = 0.0f);
     void setSeed(unsigned int seed);
     unsigned int seed() const { return seed_; }
 

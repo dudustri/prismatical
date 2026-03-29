@@ -1,8 +1,8 @@
 #include "wave.h"
 #include "../config.h"
-#include <algorithm> // std::min, std::max
-#include <cmath>     // sin, cos, M_PI
-#include <cstdlib>  // srand, rand
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
 
 Wave::Wave(unsigned int seed)
     : seed_(seed)
@@ -26,25 +26,29 @@ void Wave::deriveparamsFromSeed() {
 }
 
 void Wave::generate(int width, int height) {
+    generateAnimated(width, height, 0.0f, 0.0f);
+}
+
+void Wave::generateAnimated(int width, int height, float animDelta, float freqShift) {
     points_.clear();
 
     const int steps = config::CURVE_STEPS;
 
-    float cx = width  / 2.0f;  // screen center x — sine oscillates around 0, so we shift to the middle
-    float cy = height / 2.0f;  // screen center y — same reason
+    // sine oscillates around 0 so we shift to the middle
+    float cx = width  / 2.0f;
+    float cy = height / 2.0f;
 
     float ax = cx * config::AMPLITUDE_MARGIN;
     float ay = cy * config::AMPLITUDE_MARGIN;
+    float effectiveDelta = delta_ + animDelta;
+    float effectiveFreqA = freqA_ + freqShift;
 
     for (int i = 0; i <= steps; i++) {
-        // t goes from 0 to 2pi — one full traversal of the curve
         float t = (static_cast<float>(i) / steps) * 2.0f * M_PI;
 
-        // lissajous equations
-        float x = ax * std::sin(freqA_ * t + delta_);
+        float x = ax * std::sin(effectiveFreqA * t + effectiveDelta);
         float y = ay * std::sin(freqB_ * t);
 
-        // in screen coords: (0,0) is top-left, y grows downward
         points_.push_back({
             static_cast<int>(cx + x),
             static_cast<int>(cy + y)
@@ -52,19 +56,17 @@ void Wave::generate(int width, int height) {
     }
 }
 
-Color Wave::colorAt(float t) {
-    float h = t * 360.0f;  // hue: position on the color wheel (0=red, 120=green, 240=blue, 360=red again)
+Color Wave::colorAt(float t, float colorOffset) {
+    // sine-oscillated hue along the curve — colorOffset rotates the base, CYCLES/SPREAD control patch count and width
+    float base = std::fmod(colorOffset, config::HUE_OFFSET_WRAP) * config::HUE_DEGREES_FULL;
+    float h = base + std::sin(t * config::HUE_CYCLE_RADIANS * M_PI * config::COLOR_HUE_CYCLES) * config::COLOR_HUE_SPREAD;  // hue: position on the color wheel (0=red, 120=green, 240=blue, 360=red again)
     float s = config::COLOR_SATURATION;
     float v = config::COLOR_BRIGHTNESS;
 
-    // each color component is offset 120° apart on the wheel
-    // [&] captures h, s, v from the enclosing scope — lambda can read them without passing as args
+    // lambda function with [&] captures h, s, v from the enclosing scope
     auto hsvComponent = [&](float offset) {
-        // k = hue position relative to this component's starting sector, wrapped to [0, 6)
         float k = std::fmod(offset + h / config::HUE_SECTOR_SIZE, config::HUE_SECTOR_COUNT);
-
-        // trapezoid shape: k ramps up, (peak_width - k) ramps down, 1 clamps the top
-        // min picks the lowest — together they form a rise, hold, fall curve per component
+        // clamp to a trapezoid: each color fades in, stays bright, then fades out across the wheel
         float shape = std::max(0.0f, std::min({k, config::HUE_PEAK_WIDTH - k, 1.0f}));
 
         return v - v * s * shape;  // apply brightness and saturation

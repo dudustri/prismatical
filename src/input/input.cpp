@@ -1,7 +1,14 @@
 #include "input.h"
 #include <iostream>
-#include <unistd.h>   // STDIN_FILENO, pipe(), write(), close()
+#include <unistd.h>      // STDIN_FILENO, pipe(), write(), close()
 #include <sys/select.h>  // select() — wait on multiple file descriptors simultaneously
+
+
+std::atomic<bool> Input::interrupted(false);
+
+void Input::onInterrupt(int) {
+    Input::interrupted = true;
+}
 
 Input::Input()
     : quit_(false)
@@ -14,7 +21,6 @@ Input::Input()
     , seed_ready_(false)
 {
     // create a pipe — two connected file descriptors
-    // writing to the write end makes the read end readable — used to wake up select()
     int pipe_ends[2];
     if (pipe(pipe_ends) != 0) {
         std::cerr << "failed to create shutdown pipe\n";
@@ -23,14 +29,17 @@ Input::Input()
     shutdown_pipe_read_end_  = pipe_ends[0];
     shutdown_pipe_write_end_ = pipe_ends[1];
 
+    signal(SIGINT,  onInterrupt);
+    signal(SIGTERM, onInterrupt);
+    signal(SIGHUP,  onInterrupt);
+
     stdin_thread_ = std::thread([this]() { stdinLoop(); });
 }
 
 Input::~Input() {
     running_ = false;
     // write one byte to the write end — this wakes up select() in stdinLoop
-    // select() will see shutdown_pipe_read_end_ is readable and the loop will exit cleanly
-    if (write(shutdown_pipe_write_end_, "x", 1) < 0)
+    if (write(shutdown_pipe_write_end_, "banana", 1) < 0)
         std::cerr << "failed to signal shutdown pipe\n";
     if (stdin_thread_.joinable())
         stdin_thread_.join();
@@ -53,13 +62,11 @@ void Input::stdinLoop() {
         // if the shutdown pipe fired, the destructor signaled us to exit
         if (FD_ISSET(shutdown_pipe_read_end_, &watched_file_descriptors)) break;
 
-        // stdin is ready — read the line
         if (FD_ISSET(STDIN_FILENO, &watched_file_descriptors)) {
             std::string line;
             if (!std::getline(std::cin, line)) break;
 
-            // erase the blank line Enter leaves behind using ANSI escape codes
-            // \033[1A = move cursor up, \033[2K = erase line
+            // thats tricky: \033[1A = move cursor up, \033[2K = erase line
             std::cout << "\033[1A\033[2K" << std::flush;
 
             if (!line.empty()) {
