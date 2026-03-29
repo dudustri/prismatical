@@ -1,6 +1,6 @@
 #include "seed_randomizer.h"
-#include <cstdlib>
 #include <functional>
+#include <random>
 #include <sstream>
 #include <iomanip>
 
@@ -32,10 +32,16 @@ std::string randomSeedName() {
     static const int adjCount  = sizeof(adjectives) / sizeof(adjectives[0]);
     static const int nounCount = sizeof(nouns)       / sizeof(nouns[0]);
 
+    // seeded once from hardware entropy — static so it persists across calls without re-seeding
+    static std::mt19937 rng(std::random_device{}());
+    std::uniform_int_distribution<int> adjDist(0, adjCount  - 1);
+    std::uniform_int_distribution<int> nounDist(0, nounCount - 1);
+    std::uniform_int_distribution<int> hexDist(0, 0xFFFF);
+
     std::ostringstream oss;
-    oss << adjectives[rand() % adjCount]
-        << "-" << nouns[rand() % nounCount]
-        << "-" << std::hex << std::setw(4) << std::setfill('0') << (rand() & 0xFFFF);
+    oss << adjectives[adjDist(rng)]
+        << "-" << nouns[nounDist(rng)]
+        << "-" << std::hex << std::setw(4) << std::setfill('0') << hexDist(rng);
     return oss.str();
 }
 

@@ -12,7 +12,7 @@ namespace config {
     constexpr unsigned char BG_B = 33;
 
     // renderer
-    constexpr int DOT_RADIUS = 3;
+    constexpr int DOT_RADIUS = 2;
 
     // wave / lissajous
     constexpr int   CURVE_STEPS      = 200000; // more steps = denser curve

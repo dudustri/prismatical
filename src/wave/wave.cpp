@@ -2,7 +2,7 @@
 #include "../config.h"
 #include <algorithm>
 #include <cmath>
-#include <cstdlib>
+#include <random>
 
 Wave::Wave(unsigned int seed)
     : seed_(seed)
@@ -19,10 +19,14 @@ void Wave::setSeed(unsigned int seed) {
 }
 
 void Wave::deriveparamsFromSeed() {
-    srand(seed_);
-    freqA_ = static_cast<float>((rand() % config::FREQ_RANGE_A) + 1);
-    freqB_ = static_cast<float>((rand() % config::FREQ_RANGE_B) + 1);
-    delta_ = (static_cast<float>(rand()) / RAND_MAX) * 2.0f * M_PI;
+    std::mt19937 rng(seed_);
+    std::uniform_int_distribution<int>  freqDistA(1, config::FREQ_RANGE_A);
+    std::uniform_int_distribution<int>  freqDistB(1, config::FREQ_RANGE_B);
+    std::uniform_real_distribution<float> deltaDistribution(0.0f, 2.0f * M_PI);
+
+    freqA_ = static_cast<float>(freqDistA(rng));
+    freqB_ = static_cast<float>(freqDistB(rng));
+    delta_ = deltaDistribution(rng);
 }
 
 void Wave::generate(int width, int height) {

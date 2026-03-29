@@ -26,8 +26,8 @@ public:
 private:
     void drawDot(int x, int y, int radius, uint8_t r, uint8_t g, uint8_t b);
 
-    int  width_;
-    int  height_;
+    int width_;
+    int height_;
 
     std::unique_ptr<SDL_Window,   SDLWindowDeleter>   window_;
     std::unique_ptr<SDL_Renderer, SDLRendererDeleter> sdl_renderer_;
