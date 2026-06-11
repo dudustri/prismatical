@@ -40,7 +40,12 @@ make
 | `1`       | Toggle **phase drift** — the shape breathes |
 | `2`       | Toggle **color flow** — hues rotate along the curve |
 | `3`       | Toggle **freq morph** — the shape warps     |
+| `4`       | Cycle **view** — wave → fractal → both (same seed) |
 | `escape`  | Quit                                        |
+
+The `1`/`2`/`3` toggles drive whichever pattern is showing: on the fractal they
+rotate `c`, rotate hue, and oscillate zoom respectively. In **both** view they
+animate the wave and fractal together, each at its own pace.
 
 You can also type any word directly in the terminal and press Enter to jump to that seed.
 
@@ -58,6 +63,9 @@ All visual parameters live in `src/config.h` so you don't need to investigate th
 | `ANIM_COLOR_SPEED` | How fast the colors rotate                        |
 | `ANIM_FREQ_SPEED`  | How fast the shape warps                          |
 | `CURVE_STEPS`      | Curve density — more steps = smoother but slower  |
+| `FRACTAL_MAX_ITER` | Fractal detail — higher = finer edges, slower     |
+| `FRACTAL_ZOOM`     | How far the fractal view is zoomed in/out         |
+| `FRACTAL_C_SPEED`  | How fast the fractal morphs (phase drift)         |
 
 
 ## Roadmap

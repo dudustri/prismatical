@@ -1,7 +1,9 @@
 #pragma once
 
+#include "../anim.h"
 #include "../renderer/renderer.h"
 #include "../wave/wave.h"
+#include "../fractal/fractal.h"
 
 class Scene {
 public:
@@ -9,24 +11,27 @@ public:
 
     void setSeed(unsigned int seed);
     void draw();
-    void togglePhaseDrift()  { animPhaseDrift_  = !animPhaseDrift_;  }
-    void toggleColorFlow()   { animColorFlow_   = !animColorFlow_;   }
-    void toggleFreqMorph()   { animFreqMorph_   = !animFreqMorph_;   }
-    bool phaseDriftOn() const { return animPhaseDrift_; }
-    bool colorFlowOn()  const { return animColorFlow_;  }
-    bool freqMorphOn()  const { return animFreqMorph_;  }
+    void toggleAnim(Anim a)        { anim_[static_cast<int>(a)] = !anim_[static_cast<int>(a)]; }
+    bool animOn(Anim a) const      { return anim_[static_cast<int>(a)]; }
+    void toggleMode()        { mode_ = static_cast<Mode>((static_cast<int>(mode_) + 1) % 3); }
+    const char* modeName() const;
 
 private:
+    enum class Mode { WAVE, FRACTAL, BOTH };  // 4 cycles through these in order
+
     Renderer&    renderer_;
     Wave         wave_;
+    Fractal      fractal_;
+    Mode         mode_ = Mode::WAVE;
 
-    float animDelta_;      // phase offset
-    float colorOffset_;    // hue rotation
-    float freqTime_;       // oscillates sin back and forth
-    bool animPhaseDrift_  = false;
-    bool animColorFlow_   = false;
-    bool animFreqMorph_   = false;
+    // neutral tick counters — each pattern applies its own tuned speed at draw time,
+    // so wave and fractal animate correctly even when combined
+    float phaseTicks_;     // frames phase drift has been active
+    float colorOffset_;    // hue rotation (shared by both patterns)
+    float freqTicks_;      // frames freq morph has been active
+    bool  anim_[ANIM_COUNT] = {};  // indexed by Anim
 
-    void drawCurve();
+    void drawWave();
+    void drawFractal();
     static float seedToColorOffset(unsigned int seed);
 };

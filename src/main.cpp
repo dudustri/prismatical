@@ -1,10 +1,18 @@
 #include <print>
 #include <string>
+#include "anim.h"
 #include "config.h"
 #include "seed_randomizer.h"
 #include "renderer/renderer.h"
 #include "input/input.h"
 #include "scene/scene.h"
+
+// keys 1.. toggle these in order; labels are echoed to the terminal on toggle
+constexpr struct { Anim anim; const char* label; } kAnimControls[] = {
+    { Anim::PhaseDrift, "phase drift" },
+    { Anim::ColorFlow,  "color flow"  },
+    { Anim::FreqMorph,  "freq morph"  },
+};
 
 int main(int argc, char* argv[]) {
     unsigned int seed = (argc > 1) ? hashSeed(argv[1]) : hashSeed("prismatical");
@@ -17,7 +25,7 @@ int main(int argc, char* argv[]) {
     Input input;
     Scene scene(renderer, seed);
 
-    std::println("keys: [space] random seed  [1] phase drift  [2] color flow  [3] freq morph");
+    std::println("keys: [space] random seed  [1] phase drift  [2] color flow  [3] freq morph  [4] cycle wave/fractal/both");
 
     while (!input.quitRequested()) {
         input.poll();
@@ -33,17 +41,15 @@ int main(int argc, char* argv[]) {
             scene.setSeed(seed);
         }
 
-        if (input.togglePhaseRequested()) {
-            scene.togglePhaseDrift();
-            std::println("phase drift: {}", scene.phaseDriftOn() ? "on" : "off");
+        for (const auto& ctl : kAnimControls) {
+            if (input.animToggleRequested(ctl.anim)) {
+                scene.toggleAnim(ctl.anim);
+                std::println("{}: {}", ctl.label, scene.animOn(ctl.anim) ? "on" : "off");
+            }
         }
-        if (input.toggleColorRequested()) {
-            scene.toggleColorFlow();
-            std::println("color flow: {}", scene.colorFlowOn() ? "on" : "off");
-        }
-        if (input.toggleFreqRequested()) {
-            scene.toggleFreqMorph();
-            std::println("freq morph: {}", scene.freqMorphOn() ? "on" : "off");
+        if (input.toggleModeRequested()) {
+            scene.toggleMode();
+            std::println("mode: {}", scene.modeName());
         }
 
         scene.draw();
