@@ -14,9 +14,7 @@ Input::Input()
     : quit_(false)
     , seed_(false)
     , pending_seed_("")
-    , togglePhase_(false)
-    , toggleColor_(false)
-    , toggleFreq_(false)
+    , toggleMode_(false)
     , running_(true)
     , seed_ready_(false)
 {
@@ -83,11 +81,12 @@ void Input::pollSDL() {
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) quit_ = true;
         if (event.type == SDL_KEYDOWN) {
-            if (event.key.keysym.sym == SDLK_ESCAPE) quit_         = true;
-            if (event.key.keysym.sym == SDLK_SPACE)  seed_         = true;
-            if (event.key.keysym.sym == SDLK_1)      togglePhase_  = true;  // phase drift
-            if (event.key.keysym.sym == SDLK_2)      toggleColor_  = true;  // color flow
-            if (event.key.keysym.sym == SDLK_3)      toggleFreq_   = true;  // freq morph
+            if (event.key.keysym.sym == SDLK_ESCAPE) quit_       = true;
+            if (event.key.keysym.sym == SDLK_SPACE)  seed_       = true;
+            if (event.key.keysym.sym == SDLK_4)      toggleMode_ = true;  // wave/fractal mode
+            // keys 1.. map to the animation toggles in order (SDLK_1..SDLK_9 are consecutive)
+            for (int i = 0; i < ANIM_COUNT; i++)
+                if (event.key.keysym.sym == SDLK_1 + i) animToggle_[i] = true;
         }
     }
 }
@@ -96,9 +95,8 @@ void Input::poll() {
     quit_         = false;
     seed_         = false;
     pending_seed_ = "";
-    togglePhase_  = false;
-    toggleColor_  = false;
-    toggleFreq_   = false;
+    toggleMode_   = false;
+    for (bool& t : animToggle_) t = false;
 
     pollSDL();
 

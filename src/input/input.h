@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../anim.h"
 #include <SDL2/SDL.h>
 #include <string>
 #include <thread>
@@ -19,17 +20,15 @@ public:
     bool        quitRequested()         const { return quit_ || interrupted; }
     bool        seedRequested()         const { return seed_; }
     std::string pendingSeed()           const { return pending_seed_; }
-    bool        togglePhaseRequested()  const { return togglePhase_; }
-    bool        toggleColorRequested()  const { return toggleColor_; }
-    bool        toggleFreqRequested()   const { return toggleFreq_;  }
+    bool        animToggleRequested(Anim a) const { return animToggle_[static_cast<int>(a)]; }
+    bool        toggleModeRequested()   const { return toggleMode_;  }
 
 private:
     bool        quit_;
     bool        seed_;
     std::string pending_seed_;
-    bool        togglePhase_;
-    bool        toggleColor_;
-    bool        toggleFreq_;
+    bool        animToggle_[ANIM_COUNT] = {};  // indexed by Anim, set on keys 1..
+    bool        toggleMode_;
 
     std::thread       stdin_thread_;
     std::mutex        mutex_;

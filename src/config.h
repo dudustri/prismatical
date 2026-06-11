@@ -24,6 +24,15 @@ namespace config {
     constexpr float COLOR_HUE_SPREAD  = 90.0f;  // how many degrees of the color wheel each oscillation swings (360 = full rainbow)
     constexpr float COLOR_HUE_CYCLES  = 5.0f;   // how many color oscillations appear along the curve — more = shorter color patches
 
+    // fractal / julia set
+    constexpr int   FRACTAL_MAX_ITER     = 256;      // escape-time iteration cap — higher = finer detail, slower
+    constexpr float FRACTAL_ZOOM         = 1.5f;     // half-extent of the view in the complex plane (vertical)
+    constexpr float FRACTAL_ZOOM_RANGE   = 0.5f;     // ± zoom swing for freq morph
+    constexpr float FRACTAL_ZOOM_SPEED   = 0.00003f; // how fast the zoom oscillates per frame
+    constexpr float FRACTAL_C_SPEED      = 0.0002f;  // how fast c rotates per frame (phase drift)
+    constexpr float FRACTAL_C_RADIUS_MIN = 0.70f;    // |c| range — near the Julia-set boundary
+    constexpr float FRACTAL_C_RADIUS_MAX = 0.79f;    // where the most intricate sets appear
+
     // animation speeds
     constexpr float ANIM_PHASE_SPEED = 0.001f;  // how fast delta drifts per frame (option 1)
     constexpr float ANIM_COLOR_SPEED = 0.005f;  // how fast hue offset rotates per frame (option 2)
